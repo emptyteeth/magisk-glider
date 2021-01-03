@@ -1,0 +1,12 @@
+# query upstream dns server via socks5 proxy
+forward=socks5://127.0.0.1:52051
+
+# dedicated upstream dns server
+dnsserver=1.1.1.1:53
+
+# add resolved ip to ipset
+ipset=glider
+
+# include domainname list
+include=proxy.list
+include=proxy-custom.list
