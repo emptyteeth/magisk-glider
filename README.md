@@ -27,7 +27,7 @@
 
 - iptable rules
   - dnat dns traffic to glider dns server
-  - redirect ipset traffic to glider transparent proxy
+  - dnat ipset traffic to glider transparent proxy
 
 >config dir: /data/glider/
 

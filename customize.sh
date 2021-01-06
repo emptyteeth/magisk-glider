@@ -26,51 +26,65 @@ precheck(){
 }
 
 glider_install(){
-  # install glider binary
-  mkdir -p $MODPATH/system/bin
+  # get remote version
   gldurl="https://github.com/nadoo/glider/releases"
   gldver=$($icurl -Is $gldurl/latest | sed -nr 's/^location.*\/tag\/v(.*)\r$/\1/p')
   if [ -z $gldver ] ;then abort "get remote glider version failed" ;fi
-  ui_print "downloading glider binary"
+  ui_print "glider remote version: $gldver"
+
+  # get local version
+  if [ -x $gldhome/bin/glider ] ; then
+    gldver_local=$($gldhome/bin/glider --help | sed '2!d' | cut -d' ' -f2)
+    ui_print "glider local version: $gldver_local"
+    if [ $gldver_local = $gldver ] ;then return ;fi
+  fi
+
+  ui_print "downloading glider v${gldver}"
   gldlink="${gldurl}/download/v${gldver}/glider_${gldver}_linux_${ARCH}.tar.gz"
-  # no clue why $TMPDIR not working
-  mkdir -p $MODPATH/tmp
-  $icurl -Ls $gldlink | tar -xz -C $MODPATH/tmp --strip 1
+  mkdir -p $gldhome/tmp
+  mkdir -p $gldhome/bin
+
+  $icurl -Ls $gldlink -o $gldhome/tmp/dl.tar.gz
   iferr "download glider failed."
-  mv $MODPATH/tmp/glider $MODPATH/system/bin/glider
+
+  tar -xf $gldhome/tmp/dl.tar.gz -C $gldhome/tmp --strip 1
+  iferr "extract glider failed."
+
+  mv $gldhome/tmp/glider $gldhome/bin/glider
   iferr "extracted glider not found."
-  rm -rf $MODPATH/tmp
-  set_perm $MODPATH/system/bin/glider root root 0755
+  rm -rf $gldhome/tmp
 }
 
 config_install(){
   # install config file
-  mkdir -p $gldconf/rules.d
+  mkdir -p $gldhome/rules.d
   ui_print "copy config files(not overwriting)"
-  unzip -j -n "${ZIPFILE}" 'conf/*.conf' -d $gldconf >&2
-  unzip -j -n "${ZIPFILE}" 'conf/rules.d/*' -d $gldconf/rules.d >&2
-  set_perm_recursive $gldconf net_admin net_raw 0750 0640
+  unzip -j -n "${ZIPFILE}" 'conf/*.conf' -d $gldhome >&2
+  unzip -j -n "${ZIPFILE}" 'conf/rules.d/*' -d $gldhome/rules.d >&2
 }
 
 uplist(){
   # update proxy-list
   ui_print "updating proxy-list"
   listurl="https://raw.githubusercontent.com/Loyalsoldier/v2ray-rules-dat/release/proxy-list.txt"
-  $icurl -Ls $listurl >$gldconf/rules.d/proxy.list
+  $icurl -Ls $listurl -o $gldhome/rules.d/proxy.list
   iferr "update proxy-list failed"
-  sed -i '/^regexp:/d;s/^/domain=&/g' $gldconf/rules.d/proxy.list
+  sed -i '/^regexp:/d;s/^/domain=&/g' $gldhome/rules.d/proxy.list
 }
 
 paperwork(){
   # install scripts
   unzip -j -o "${ZIPFILE}" 'service.sh' -d $MODPATH >&2
+  unzip -j -o "${ZIPFILE}" 'uninstall.sh' -d $MODPATH >&2
   unzip -j -o "${ZIPFILE}" 'module.prop' -d $MODPATH >&2
   # set permissions
-  ui_print "set permissions"
-  set_perm $MODPATH root root 0750
-  set_perm $MODPATH/service.sh root root 0750
+  ui_print "setting permissions"
+  set_perm_recursive $MODPATH root root 0750 0750
   set_perm $MODPATH/module.prop root root 0640
+  set_perm_recursive $gldhome net_admin net_raw 0770 0660
+  set_perm $gldhome/bin/glider root root 0755
   # some notes
+  ui_print "installation succeeded"
   ui_print "before reboot:"
   ui_print "1. turn off android private dns"
   ui_print "2. turn off ipv6 in APN setting"
@@ -78,7 +92,7 @@ paperwork(){
 }
 
 ############ main start ############
-gldconf="/data/glider"
+gldhome="/data/glider"
 precheck
 glider_install
 config_install
