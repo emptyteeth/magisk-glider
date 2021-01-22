@@ -1,6 +1,6 @@
 id=glider
 name=glider
-version=v1.3
-versionCode=13
+version=v1.3.1
+versionCode=131
 author=module by et.
 description=glider(author by nadoo@github) is a forward proxy with multiple protocols support, and also a dns/dhcp server with ipset management features(like dnsmasq).

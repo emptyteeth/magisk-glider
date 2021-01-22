@@ -28,7 +28,7 @@ precheck(){
 glider_install(){
   # get remote version
   gldurl="https://github.com/nadoo/glider/releases"
-  gldver=$($icurl -Is $gldurl/latest | sed -nr 's/^location.*\/tag\/v(.*)\r$/\1/p')
+  gldver=$($icurl -Is $gldurl/latest | sed -nr 's/^location.*\/tag\/v(.*)\r$/\1/pi')
   if [ -z $gldver ] ;then abort "get remote glider version failed" ;fi
   ui_print "glider remote version: $gldver"
 
