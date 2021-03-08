@@ -55,6 +55,12 @@ glider_install(){
   rm -rf $gldhome/tmp
 }
 
+ipt2socks_install(){
+if [ ! -e $gldhome/bin/ipt2socks ] ; then
+  unzip -j -o "${ZIPFILE}" 'binary/ipt2socks' -d $gldhome/bin >&2
+fi
+}
+
 config_install(){
   # install config file
   mkdir -p $gldhome/rules.d
@@ -83,6 +89,7 @@ paperwork(){
   set_perm $MODPATH/module.prop root root 0640
   set_perm_recursive $gldhome net_admin net_raw 0770 0660
   set_perm $gldhome/bin/glider root root 0755
+  set_perm $gldhome/bin/ipt2socks root root 0755
   # some notes
   ui_print "installation succeeded"
   ui_print "before reboot:"
@@ -95,6 +102,7 @@ paperwork(){
 gldhome="/data/glider"
 precheck
 glider_install
+ipt2socks_install
 config_install
 uplist
 paperwork

@@ -3,6 +3,7 @@
 ## Credits
 
 - [nadoo](https://github.com/nadoo) for [glider](https://github.com/nadoo/glider)
+- [zfl9](https://github.com/zfl9) for [ipt2socks](https://github.com/zfl9/ipt2socks)
 - [Loyalsoldier](https://github.com/Loyalsoldier) for [proxy-list](https://github.com/Loyalsoldier/v2ray-rules-dat)
 - [topjohnwu](https://github.com/topjohnwu) for [magisk](https://github.com/topjohnwu/Magisk)
 
@@ -13,11 +14,11 @@
   - IP_SET_HASH_NET
   - NETFILTER_XT_SET
 
-## What this module do
+## What this module does
 
 - Running glider as proxy server (`proxy.conf`)
   - transparent proxy
-  - http/socks5 proxy
+  - socks5 proxy
 
 - Running glider as dns forwarding server and ipset manager (`dns.conf`)
   - general upstream dns server 223.5.5.5 223.6.6.6
@@ -25,9 +26,12 @@
   - resolving proxy-list domain names by query 1.1.1.1 via socks5 proxy (`rules.d/proxy.rule`)
   - create ipset for proxy-list domain names (`rules.d/proxy.rule`)
 
+- Running ipt2socks as tproxy proxy
+
 - iptable rules
   - dnat dns traffic to glider dns server
-  - dnat ipset traffic to glider transparent proxy
+  - dnat tcp ipset traffic to glider transparent proxy
+  - tproxy redirect udp ipset traffic to iptsocks
 
 >config dir: /data/glider/
 
