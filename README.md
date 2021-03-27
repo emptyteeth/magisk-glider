@@ -14,7 +14,7 @@
   - IP_SET_HASH_NET
   - NETFILTER_XT_SET
 
-## What this module does
+## What does this module do
 
 - Running glider as proxy server (`proxy.conf`)
   - transparent proxy
@@ -31,7 +31,7 @@
 - iptable rules
   - dnat dns traffic to glider dns server
   - dnat tcp ipset traffic to glider transparent proxy
-  - tproxy redirect udp ipset traffic to iptsocks
+  - tproxy redirect udp ipset traffic to ipt2socks
 
 >config dir: /data/glider/
 

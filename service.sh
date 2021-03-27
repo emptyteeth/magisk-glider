@@ -65,32 +65,36 @@ ipt2socks_down() {
 #iptable rules
 rules_up() {
     rules_down
-    #create GLIDER chain
-    iptables -t nat -N GLIDER
-    #dnat tg set
-    iptables -t nat -A GLIDER -p tcp -m set --match-set tg dst -j DNAT --to-destination 127.0.0.1:${redirport}
-    #dnat glider set
-    iptables -t nat -A GLIDER -p tcp -m set --match-set glider dst -j DNAT --to-destination 127.0.0.1:${redirport}
-    #dnat dns
-    iptables -t nat -A GLIDER -p udp -m owner ! --uid-owner net_admin --dport 53 -j DNAT --to-destination 127.0.0.1:${dnsport}
+
+    #glider chain
+    iptables -t nat -N glider
+    iptables -t nat -A glider -p tcp -m set --match-set tg dst -j REDIRECT --to-port ${redirport}
+    iptables -t nat -A glider -p tcp -m set --match-set glider dst -j REDIRECT --to-port ${redirport}
+
+    #gliderdns chain
+    iptables -t nat -N gliderdns
+    iptables -t nat -A gliderdns -p udp -m owner ! --uid-owner net_admin --dport 53 -j DNAT --to-destination 127.0.0.1:${dnsport}
+
     #apply to OUTPUT chain
-    iptables -t nat -A OUTPUT -j GLIDER
-    
+    iptables -t nat -A OUTPUT -j glider
+    iptables -t nat -A OUTPUT -j gliderdns
+    #apply to PREROUTING chain
+    iptables -t nat -A PREROUTING -j glider
+
     #udp
     ip route add local default dev lo table 200
     ip rule add fwmark 598334 table 200
 
-    #create ipt2socks_prerouting chain
+    #ipt2socks_prerouting chain
     iptables -t mangle -N ipt2socks_prerouting
-    #TPROXY marked packets
-    iptables -t mangle -A ipt2socks_prerouting -p udp -m mark --mark 598334 -j TPROXY --on-port ${redirport} --on-ip 127.0.0.1 --tproxy-mark 598334
+    iptables -t mangle -A ipt2socks_prerouting -p udp -m mark --mark 598334 -j TPROXY --on-port ${redirport} --on-ip 127.0.0.1
+    
+    #ipt2socks_output chain
+    iptables -t mangle -N ipt2socks_output
+    iptables -t mangle -A ipt2socks_output -p udp -m set --match-set glider dst -j MARK --set-mark 598334
+
     #apply to PREROUTING chain
     iptables -t mangle -A PREROUTING -j ipt2socks_prerouting
-
-    #create ipt2socks_output chain
-    iptables -t mangle -N ipt2socks_output
-    #mark ipset udp packets
-    iptables -t mangle -A ipt2socks_output -p udp -m set --match-set glider dst -j MARK --set-mark 598334
     #apply to OUTPUT chain
     iptables -t mangle -A OUTPUT -j ipt2socks_output
     
@@ -100,12 +104,21 @@ rules_up() {
 rules_down() {
     #rules deduplication
     iptables-save -t nat | uniq | iptables-restore
-    #stop apply to OUTPUT chain
-    iptables -t nat -D OUTPUT -j GLIDER 2>/dev/null
-    #flush GLIDER chain
-    iptables -t nat -F GLIDER 2>/dev/null
-    #delete GLIDER chain
-    iptables -t nat -X GLIDER 2>/dev/null
+
+    #clean OUTPUT chain
+    iptables -t nat -D OUTPUT -j gliderdns 2>/dev/null
+    iptables -t nat -D OUTPUT -j glider 2>/dev/null
+
+    #clean PREROUTING chain
+    iptables -t nat -D PREROUTING -j glider 2>/dev/null
+
+    #delete glider chain
+    iptables -t nat -F glider 2>/dev/null
+    iptables -t nat -X glider 2>/dev/null
+
+    #delete gliderdns chain
+    iptables -t nat -F gliderdns 2>/dev/null
+    iptables -t nat -X gliderdns 2>/dev/null
     
     #udp
     ip rule del fwmark 598334 table 200 2>/dev/null
@@ -116,16 +129,15 @@ rules_down() {
 
     #clean PREROUTING chain
     iptables -t mangle -D PREROUTING -j ipt2socks_prerouting 2>/dev/null
-    #flush ipt2socks_prerouting chain
-    iptables -t mangle -F ipt2socks_prerouting 2>/dev/null
-    #delete ipt2socks_prerouting chain
-    iptables -t mangle -X ipt2socks_prerouting 2>/dev/null
-
     #clean OUTPUT chain
     iptables -t mangle -D OUTPUT -j ipt2socks_output 2>/dev/null
-    #flush ipt2socks_output chain
-    iptables -t mangle -F ipt2socks_output 2>/dev/null
+
+    #delete ipt2socks_prerouting chain
+    iptables -t mangle -F ipt2socks_prerouting 2>/dev/null
+    iptables -t mangle -X ipt2socks_prerouting 2>/dev/null
+
     #delete ipt2socks_output chain
+    iptables -t mangle -F ipt2socks_output 2>/dev/null
     iptables -t mangle -X ipt2socks_output 2>/dev/null
     
     echo "iptable rules unloaded"
