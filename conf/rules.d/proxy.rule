@@ -1,5 +1,15 @@
-# query upstream dns server via socks5 proxy
-forward=socks5://127.0.0.1:52051
+# at least one forwarder is required
+forward=
+# more forwarder for high availability
+# forward=
+
+# for more settings head to:
+# https://github.com/nadoo/glider
+
+strategy=lha
+checkinterval=120
+checktolerance=50
+checkdisabledonly=true
 
 # dedicated upstream dns server
 dnsserver=1.1.1.1:53

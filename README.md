@@ -16,22 +16,18 @@
 
 ## What does this module do
 
-- Running glider as proxy server (`proxy.conf`)
-  - transparent proxy
-  - socks5 proxy
+- Running glider as socks5 proxy, dns forwarding server and ipset manager
+  - general upstream dns server 223.5.5.5 223.6.6.6 (`glider.conf`)
+  - resolving proxy-list and custom domains by query 1.1.1.1 via forwarder (`rules.d/proxy.rule`)
+  - create ipset for proxy-list and custom domains (`rules.d/proxy.rule`)
 
-- Running glider as dns forwarding server and ipset manager (`dns.conf`)
-  - general upstream dns server 223.5.5.5 223.6.6.6
-  - create ipset for telegram CIDRs (`rules.d/tg.rule`)
-  - resolving proxy-list domain names by query 1.1.1.1 via socks5 proxy (`rules.d/proxy.rule`)
-  - create ipset for proxy-list domain names (`rules.d/proxy.rule`)
-
-- Running ipt2socks as tproxy proxy
+- Running ipt2socks as a transparent proxy
+  - forward to glider socks5 proxy
 
 - iptable rules
   - dnat dns traffic to glider dns server
-  - dnat tcp ipset traffic to glider transparent proxy
-  - tproxy redirect udp ipset traffic to ipt2socks
+  - redirect ipset tcp traffic to ipt2socks
+  - tproxy ipset udp traffic to ipt2socks
 
 >config dir: /data/glider/
 
@@ -39,7 +35,7 @@
 
 - turn off android private dns
 - turn off ipv6 in APN setting
-- drop your forwarder into `proxy.conf`
+- drop your forwarder into `rules.d/proxy.rule`
   - at least one forwarder is required
   - more forwarder for high availability
   - example
@@ -67,28 +63,29 @@
     ```
 
 - intranet domain
-  - make a rule file with intranet dns server and domain names
+  - make a rule file with intranet dns server and domains
 
     ```ini
     # rules.d/intranet-office.rule
     # intranet dns server
     dnsserver=10.10.10.1
     # intranet domains
+    # anything under these domains will forward to intranet dns server
     domain=example.com
     ```
 
 - custom dns record / dns blocking
-  - add to `dns.conf`
+  - add to `glider.conf`
 
     ```ini
     dnsrecord=my.example.com/10.10.10.10
     dnsrecord=ad.example.com/0.0.0.0
     ```
 
-  - OR make a conf file and include it in `dns.conf`
+  - OR make a conf file and include it in `glider.conf`
 
     ```ini
-    # dns.conf
+    # glider.conf
     include=mydnsrecord.conf
     include=dnsblocking.conf
 

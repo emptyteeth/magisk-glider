@@ -28,7 +28,6 @@ precheck(){
 
   #check config file
   if [ -z "$dnsport" ] ;then abort "parsing dns port failed" ;fi
-  if [ -z "$redirport" ] ;then abort "parsing redir port failed" ;fi
   if [ -z "$forwarder" ] ;then abort "at least one forwarder is required" ;fi
   if [ -z "$s5port" ] ;then abort "parsing socks5 port failed" ;fi
 }
@@ -36,8 +35,7 @@ precheck(){
 #glider
 glider_up() {
   glider_down
-  su net_admin -c "nohup $gldhome/bin/glider -config $gldhome/dns.conf >/dev/null 2>&1 &"
-  su net_raw -c "nohup $gldhome/bin/glider -config $gldhome/proxy.conf >/dev/null 2>&1 &"
+  su net_admin -c "nohup $gldhome/bin/glider -config $gldhome/glider.conf >/dev/null 2>&1 &"
   echo "glider started"
 }
 
@@ -51,7 +49,7 @@ glider_down() {
 #ipt2socks
 ipt2socks_up() {
   ipt2socks_down
-  su net_admin -c "nohup $gldhome/bin/ipt2socks -s 127.0.0.1 -p ${s5port} -U -4 -l ${redirport} >/dev/null 2>&1 &"
+  su net_admin -c "nohup $gldhome/bin/ipt2socks -s 127.0.0.1 -p ${s5port} -4 -R -b 0.0.0.0 -l ${redirport} >/dev/null 2>&1 &"
   echo "ipt2socks started"
 }
 
@@ -68,7 +66,6 @@ rules_up() {
 
     #glider chain
     iptables -t nat -N glider
-    iptables -t nat -A glider -p tcp -m set --match-set tg dst -j REDIRECT --to-port ${redirport}
     iptables -t nat -A glider -p tcp -m set --match-set glider dst -j REDIRECT --to-port ${redirport}
 
     #gliderdns chain
@@ -85,16 +82,23 @@ rules_up() {
     ip route add local default dev lo table 200
     ip rule add fwmark 598334 table 200
 
-    #ipt2socks_prerouting chain
-    iptables -t mangle -N ipt2socks_prerouting
-    iptables -t mangle -A ipt2socks_prerouting -p udp -m mark --mark 598334 -j TPROXY --on-port ${redirport} --on-ip 127.0.0.1
+    #ipt2socks_prerouting_output chain
+    iptables -t mangle -N ipt2socks_prerouting_output
+    iptables -t mangle -A ipt2socks_prerouting_output ! -i lo -j RETURN
+    iptables -t mangle -A ipt2socks_prerouting_output -p udp -m mark --mark 598334 -j TPROXY --on-port ${redirport} --on-ip 127.0.0.1
+
+    #ipt2socks_prerouting_forward chain
+    iptables -t mangle -N ipt2socks_prerouting_forward
+    iptables -t mangle -A ipt2socks_prerouting_forward -i lo -j RETURN
+    iptables -t mangle -A ipt2socks_prerouting_forward -p udp -m set --match-set glider dst -j TPROXY --on-port 1081 --on-ip 127.0.0.1 --tproxy-mark 598334
     
     #ipt2socks_output chain
     iptables -t mangle -N ipt2socks_output
     iptables -t mangle -A ipt2socks_output -p udp -m set --match-set glider dst -j MARK --set-mark 598334
 
     #apply to PREROUTING chain
-    iptables -t mangle -A PREROUTING -j ipt2socks_prerouting
+    iptables -t mangle -A PREROUTING -j ipt2socks_prerouting_output
+    iptables -t mangle -A PREROUTING -j ipt2socks_prerouting_forward
     #apply to OUTPUT chain
     iptables -t mangle -A OUTPUT -j ipt2socks_output
     
@@ -128,13 +132,18 @@ rules_down() {
     iptables-save -t mangle | uniq | iptables-restore
 
     #clean PREROUTING chain
-    iptables -t mangle -D PREROUTING -j ipt2socks_prerouting 2>/dev/null
+    iptables -t mangle -D PREROUTING -j ipt2socks_prerouting_output 2>/dev/null
+    iptables -t mangle -D PREROUTING -j ipt2socks_prerouting_forward 2>/dev/null
     #clean OUTPUT chain
     iptables -t mangle -D OUTPUT -j ipt2socks_output 2>/dev/null
 
-    #delete ipt2socks_prerouting chain
-    iptables -t mangle -F ipt2socks_prerouting 2>/dev/null
-    iptables -t mangle -X ipt2socks_prerouting 2>/dev/null
+    #delete ipt2socks_prerouting_output chain
+    iptables -t mangle -F ipt2socks_prerouting_output 2>/dev/null
+    iptables -t mangle -X ipt2socks_prerouting_output 2>/dev/null
+
+    #delete ipt2socks_prerouting_forward chain
+    iptables -t mangle -F ipt2socks_prerouting_forward 2>/dev/null
+    iptables -t mangle -X ipt2socks_prerouting_forward 2>/dev/null
 
     #delete ipt2socks_output chain
     iptables -t mangle -F ipt2socks_output 2>/dev/null
@@ -149,10 +158,10 @@ until [ $(getprop sys.boot_completed) -eq 1 ] ; do
 done
 
 gldhome="/data/glider"
-dnsport=$(sed -nr 's/^\s*dns=.*:([0-9]+)$/\1/p' <${gldhome}/dns.conf | head -n1)
-redirport=$(sed -nr 's/^\s*listen=redir.*:([0-9]+)$/\1/p' <${gldhome}/proxy.conf | head -n1)
-forwarder=$(sed -nr 's/^\s*forward=(.+:\/\/.+)$/\1/p' <${gldhome}/proxy.conf)
-s5port=$(sed -nr 's/^\s*listen=socks5.*:([0-9]+)$/\1/p' <${gldhome}/proxy.conf | head -n1)
+dnsport=$(sed -nr 's/^\s*dns=.*:([0-9]+)$/\1/p' <${gldhome}/glider.conf | head -n1)
+redirport="52052"
+forwarder=$(sed -nr 's/^\s*forward=(.+:\/\/.+)$/\1/p' <${gldhome}/rules.d/proxy.rule)
+s5port=$(sed -nr 's/^\s*listen=socks5.*:([0-9]+)$/\1/p' <${gldhome}/glider.conf | head -n1)
 
 if [ -z "$1" ];then
   precheck
