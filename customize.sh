@@ -87,7 +87,7 @@ paperwork(){
   ui_print "setting permissions"
   set_perm_recursive $MODPATH root root 0750 0750
   set_perm $MODPATH/module.prop root root 0640
-  set_perm_recursive $gldhome net_admin net_raw 0770 0660
+  set_perm_recursive $gldhome net_admin root 0770 0660
   set_perm $gldhome/bin/glider root root 0755
   set_perm $gldhome/bin/ipt2socks root root 0755
   # some notes
