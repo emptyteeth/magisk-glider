@@ -90,7 +90,7 @@ rules_up() {
     #ipt2socks_prerouting_forward chain
     iptables -t mangle -N ipt2socks_prerouting_forward
     iptables -t mangle -A ipt2socks_prerouting_forward -i lo -j RETURN
-    iptables -t mangle -A ipt2socks_prerouting_forward -p udp -m set --match-set glider dst -j TPROXY --on-port 1081 --on-ip 127.0.0.1 --tproxy-mark 598334
+    iptables -t mangle -A ipt2socks_prerouting_forward -p udp -m set --match-set glider dst -j TPROXY --on-port ${redirport} --on-ip 127.0.0.1 --tproxy-mark 598334
     
     #ipt2socks_output chain
     iptables -t mangle -N ipt2socks_output
