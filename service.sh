@@ -49,7 +49,7 @@ glider_down() {
 #ipt2socks
 ipt2socks_up() {
   ipt2socks_down
-  su net_admin -c "nohup $gldhome/bin/ipt2socks -s 127.0.0.1 -p ${s5port} -4 -R -b 0.0.0.0 -l ${redirport} >/dev/null 2>&1 &"
+  su net_admin -c "nohup $gldhome/bin/ipt2socks -s 127.0.0.1 -p ${s5port} -4 -R -l ${redirport} >/dev/null 2>&1 &"
   echo "ipt2socks started"
 }
 
@@ -64,44 +64,39 @@ ipt2socks_down() {
 rules_up() {
     rules_down
 
-    #glider chain
-    iptables -t nat -N glider
-    iptables -t nat -A glider -p tcp -m set --match-set glider dst -j REDIRECT --to-port ${redirport}
+    #ipt2socks chain
+    iptables -t nat -N ipt2socks
+    iptables -t nat -A ipt2socks -p tcp -m set --match-set glider dst -j REDIRECT --to-port ${redirport}
 
     #gliderdns chain
     iptables -t nat -N gliderdns
     iptables -t nat -A gliderdns -p udp -m owner ! --uid-owner net_admin --dport 53 -j DNAT --to-destination 127.0.0.1:${dnsport}
 
     #apply to OUTPUT chain
-    iptables -t nat -A OUTPUT -j glider
+    iptables -t nat -A OUTPUT -j ipt2socks
     iptables -t nat -A OUTPUT -j gliderdns
     #apply to PREROUTING chain
-    iptables -t nat -A PREROUTING -j glider
+    iptables -t nat -A PREROUTING -j ipt2socks
 
     #udp
     ip route add local default dev lo table 200
     ip rule add fwmark 598334 table 200
 
-    #ipt2socks_prerouting_output chain
-    iptables -t mangle -N ipt2socks_prerouting_output
-    iptables -t mangle -A ipt2socks_prerouting_output ! -i lo -j RETURN
-    iptables -t mangle -A ipt2socks_prerouting_output -p udp -m mark --mark 598334 -j TPROXY --on-port ${redirport} --on-ip 127.0.0.1
+    #ipt2socks chain
+    iptables -t mangle -N ipt2socks
+    iptables -t mangle -A ipt2socks -m mark --mark 598334 -j RETURN
+    iptables -t mangle -A ipt2socks -p udp -m set --match-set glider dst -j MARK --set-mark 598334
 
-    #ipt2socks_prerouting_forward chain
-    iptables -t mangle -N ipt2socks_prerouting_forward
-    iptables -t mangle -A ipt2socks_prerouting_forward -i lo -j RETURN
-    iptables -t mangle -A ipt2socks_prerouting_forward -p udp -m set --match-set glider dst -j TPROXY --on-port ${redirport} --on-ip 127.0.0.1 --tproxy-mark 598334
-    
-    #ipt2socks_output chain
-    iptables -t mangle -N ipt2socks_output
-    iptables -t mangle -A ipt2socks_output -p udp -m set --match-set glider dst -j MARK --set-mark 598334
+    #ipt2socks_prerouting chain
+    iptables -t mangle -N ipt2socks_prerouting
+    iptables -t mangle -A ipt2socks_prerouting -p udp -m mark --mark 598334 -j TPROXY --on-ip 127.0.0.1 --on-port ${redirport}
 
-    #apply to PREROUTING chain
-    iptables -t mangle -A PREROUTING -j ipt2socks_prerouting_output
-    iptables -t mangle -A PREROUTING -j ipt2socks_prerouting_forward
     #apply to OUTPUT chain
-    iptables -t mangle -A OUTPUT -j ipt2socks_output
-    
+    iptables -t mangle -A OUTPUT -j ipt2socks
+    #apply to PREROUTING chain
+    iptables -t mangle -A PREROUTING -j ipt2socks
+    iptables -t mangle -A PREROUTING -j ipt2socks_prerouting
+
     echo "iptable rules loaded"
 }
 
@@ -111,14 +106,14 @@ rules_down() {
 
     #clean OUTPUT chain
     iptables -t nat -D OUTPUT -j gliderdns 2>/dev/null
-    iptables -t nat -D OUTPUT -j glider 2>/dev/null
+    iptables -t nat -D OUTPUT -j ipt2socks 2>/dev/null
 
     #clean PREROUTING chain
-    iptables -t nat -D PREROUTING -j glider 2>/dev/null
+    iptables -t nat -D PREROUTING -j ipt2socks 2>/dev/null
 
-    #delete glider chain
-    iptables -t nat -F glider 2>/dev/null
-    iptables -t nat -X glider 2>/dev/null
+    #delete ipt2socks chain
+    iptables -t nat -F ipt2socks 2>/dev/null
+    iptables -t nat -X ipt2socks 2>/dev/null
 
     #delete gliderdns chain
     iptables -t nat -F gliderdns 2>/dev/null
@@ -132,23 +127,19 @@ rules_down() {
     iptables-save -t mangle | uniq | iptables-restore
 
     #clean PREROUTING chain
-    iptables -t mangle -D PREROUTING -j ipt2socks_prerouting_output 2>/dev/null
-    iptables -t mangle -D PREROUTING -j ipt2socks_prerouting_forward 2>/dev/null
+    iptables -t mangle -D PREROUTING -j ipt2socks_prerouting 2>/dev/null
+    iptables -t mangle -D PREROUTING -j ipt2socks 2>/dev/null
     #clean OUTPUT chain
-    iptables -t mangle -D OUTPUT -j ipt2socks_output 2>/dev/null
+    iptables -t mangle -D OUTPUT -j ipt2socks 2>/dev/null
 
-    #delete ipt2socks_prerouting_output chain
-    iptables -t mangle -F ipt2socks_prerouting_output 2>/dev/null
-    iptables -t mangle -X ipt2socks_prerouting_output 2>/dev/null
+    #delete ipt2socks_prerouting chain
+    iptables -t mangle -F ipt2socks_prerouting 2>/dev/null
+    iptables -t mangle -X ipt2socks_prerouting 2>/dev/null
 
-    #delete ipt2socks_prerouting_forward chain
-    iptables -t mangle -F ipt2socks_prerouting_forward 2>/dev/null
-    iptables -t mangle -X ipt2socks_prerouting_forward 2>/dev/null
+    #delete ipt2socks chain
+    iptables -t mangle -F ipt2socks 2>/dev/null
+    iptables -t mangle -X ipt2socks 2>/dev/null
 
-    #delete ipt2socks_output chain
-    iptables -t mangle -F ipt2socks_output 2>/dev/null
-    iptables -t mangle -X ipt2socks_output 2>/dev/null
-    
     echo "iptable rules unloaded"
 }
 
