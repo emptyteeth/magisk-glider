@@ -3,7 +3,6 @@
 ## Credits
 
 - [nadoo](https://github.com/nadoo) for [glider](https://github.com/nadoo/glider)
-- [zfl9](https://github.com/zfl9) for [ipt2socks](https://github.com/zfl9/ipt2socks)
 - [Loyalsoldier](https://github.com/Loyalsoldier) for [proxy-list](https://github.com/Loyalsoldier/v2ray-rules-dat)
 - [topjohnwu](https://github.com/topjohnwu) for [magisk](https://github.com/topjohnwu/Magisk)
 
@@ -16,18 +15,15 @@
 
 ## What does this module do
 
-- Running glider as socks5 proxy, dns forwarding server and ipset manager
-  - general upstream dns server 223.5.5.5 223.6.6.6 (`glider.conf`)
-  - resolving proxy-list and custom domains by query 1.1.1.1 via forwarder (`rules.d/proxy.rule`)
+- Running glider (`glider.conf`)
+  - transparent proxy
+  - dns forwarding server
+  - resolving proxy-list and custom domains via forwarder (`rules.d/proxy.rule`)
   - create ipset for proxy-list and custom domains (`rules.d/proxy.rule`)
 
-- Running ipt2socks as a transparent proxy
-  - forward to glider socks5 proxy
-
 - iptable rules
-  - dnat dns traffic to glider dns server
-  - redirect ipset tcp traffic to ipt2socks
-  - tproxy ipset udp traffic to ipt2socks
+  - dnat dns traffic to dns forwarding server
+  - redirect ipset tcp traffic to transparent proxy
 
 >config dir: /data/glider/
 
@@ -52,6 +48,24 @@
 - reboot and you're all set
 
 ## Customize (optional)
+
+- upstream dns server
+  - general
+
+    ```ini
+    # default general upstream dns server
+    # glider.conf
+    dnsserver=223.5.5.5:53
+    dnsserver=223.6.6.6:53
+    ```
+
+  - proxied
+
+    ```ini
+    # default proxied upstream dns server
+    # rules.d/proxy.rule
+    dnsserver=1.1.1.1:53
+    ```
 
 - custom proxy domain/ip/CIDR
   - add to `rules.d/proxy-custom.list`
