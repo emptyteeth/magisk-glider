@@ -40,19 +40,27 @@ glider_install(){
   fi
 
   ui_print "downloading glider v${gldver}"
-  gldlink="${gldurl}/download/v${gldver}/glider_${gldver}_linux_${ARCH}.tar.gz"
-  mkdir -p $gldhome/tmp
-  mkdir -p $gldhome/bin
+  mkdir -p "$gldhome/tmp"
+  mkdir -p "$gldhome/bin"
 
-  $icurl -Ls $gldlink -o $gldhome/tmp/dl.tar.gz
+  # assemble download url
+  dlprefix="${gldurl}/download/v${gldver}"
+  gldfilename="glider_${gldver}_linux_${ARCH}.tar.gz"
+  gldchksumfilename="glider_${gldver}_checksums.txt"
+
+  # download glider
+  $icurl -Ls "$dlprefix/$gldfilename" -o "$gldhome/tmp/$gldfilename"
   iferr "download glider failed."
 
-  tar -xf $gldhome/tmp/dl.tar.gz -C $gldhome/tmp --strip 1
-  iferr "extract glider failed."
+  # match checksum
+  $icurl -Ls "$dlprefix/$gldchksumfilename" | grep "$(cd $gldhome/tmp && sha256sum $gldfilename)"
+  iferr "checksum mismatch."
 
-  mv $gldhome/tmp/glider $gldhome/bin/glider
-  iferr "extracted glider not found."
-  rm -rf $gldhome/tmp
+  # extract and move glider binary
+  tar -xf "$gldhome/tmp/$gldfilename" -C "$gldhome/tmp" --strip 1
+  iferr "extract glider failed."
+  mv "$gldhome/tmp/glider" "$gldhome/bin/glider"
+  rm -rf "$gldhome/tmp"
 }
 
 config_install(){
@@ -69,7 +77,7 @@ uplist(){
   listurl="https://raw.githubusercontent.com/Loyalsoldier/v2ray-rules-dat/release/proxy-list.txt"
   $icurl -Ls $listurl -o $gldhome/rules.d/proxy.list
   iferr "update proxy-list failed"
-  sed -i '/^regexp:/d;s/^/domain=&/g' $gldhome/rules.d/proxy.list
+  sed -i '/^regexp:/d;s/^full://g;s/^/domain=&/g' $gldhome/rules.d/proxy.list
 }
 
 paperwork(){

@@ -44,6 +44,7 @@ glider_down() {
 #iptable rules
 rules_up() {
     rules_down
+    if ! pidof glider >/dev/null ;then abort "glider is not running, stop loading rules";fi
 
     #glider chain
     iptables -t nat -N glider
