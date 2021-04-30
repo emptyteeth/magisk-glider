@@ -17,24 +17,25 @@ precheck(){
     if [ ! -d /sys/module/${k} ] ;then abort "${k} kernel module required." ;fi
   done
   # detect curl
-  icurl="curl"
+  icurl="curl --retry 2 --connect-timeout 5"
   if ! type curl >/dev/null 2>&1 ; then
     unzip -j -o "${ZIPFILE}" 'binary/curl' -d ${TMPDIR} >&2
     chmod 755 ${TMPDIR}/curl
-    icurl="${TMPDIR}/curl"
+    icurl="${TMPDIR}/curl --retry 2 --connect-timeout 5"
   fi
 }
 
 glider_install(){
   # get remote version
+  ui_print "checking glider release version"
   gldurl="https://github.com/nadoo/glider/releases"
   gldver=$($icurl -Is $gldurl/latest | sed -nr 's/^location.*\/tag\/v(.*)\r$/\1/pi')
   if [ -z $gldver ] ;then abort "get remote glider version failed" ;fi
-  ui_print "glider remote version: $gldver"
+  ui_print "glider release version: $gldver"
 
   # get local version
   if [ -x $gldhome/bin/glider ] ; then
-    gldver_local=$($gldhome/bin/glider --help | sed '2!d' | cut -d' ' -f2)
+    gldver_local=$($gldhome/bin/glider -h | sed '2!d' | cut -d' ' -f2)
     ui_print "glider local version: $gldver_local"
     if [ $gldver_local = $gldver ] ;then return ;fi
   fi
@@ -53,10 +54,13 @@ glider_install(){
   iferr "download glider failed."
 
   # match checksum
-  $icurl -Ls "$dlprefix/$gldchksumfilename" | grep "$(cd $gldhome/tmp && sha256sum $gldfilename)"
-  iferr "checksum mismatch."
+  ui_print "verifing sha256 checksum"
+  $icurl -Ls "$dlprefix/$gldchksumfilename" | grep "$(cd $gldhome/tmp && sha256sum $gldfilename)" >&2
+  iferr "checksum mismatched."
+  ui_print "checksum matched"
 
   # extract and move glider binary
+  ui_print "extracting binary"
   tar -xf "$gldhome/tmp/$gldfilename" -C "$gldhome/tmp" --strip 1
   iferr "extract glider failed."
   mv "$gldhome/tmp/glider" "$gldhome/bin/glider"
@@ -66,7 +70,7 @@ glider_install(){
 config_install(){
   # install config file
   mkdir -p $gldhome/rules.d
-  ui_print "copy config files(not overwriting)"
+  ui_print "installing configuration files(not overwriting)"
   unzip -j -n "${ZIPFILE}" 'conf/*.conf' -d $gldhome >&2
   unzip -j -n "${ZIPFILE}" 'conf/rules.d/*' -d $gldhome/rules.d >&2
 }
