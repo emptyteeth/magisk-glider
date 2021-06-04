@@ -42,7 +42,7 @@
     # vmess over ws over tls
     forward=tls://server.com:443,ws://@/PATH,vmess://UUID@?alterID=123
     ```
-  
+
   - [more examples](https://github.com/nadoo/glider/blob/master/config/glider.conf.example#L81-L151)
 
 - reboot and you're all set
@@ -53,7 +53,7 @@
   - general
 
     ```ini
-    # default general upstream dns server
+    # default general upstream dns server(tcp mode is required)
     # glider.conf
     dnsserver=223.5.5.5:53
     dnsserver=223.6.6.6:53
@@ -62,7 +62,7 @@
   - proxied
 
     ```ini
-    # default proxied upstream dns server
+    # default proxied upstream dns server(tcp mode is required)
     # rules.d/proxy.rule
     dnsserver=1.1.1.1:53
     ```
@@ -81,7 +81,7 @@
 
     ```ini
     # rules.d/intranet-office.rule
-    # intranet dns server
+    # intranet dns server(tcp mode is required)
     dnsserver=10.10.10.1
     # intranet domains
     # anything under these domains will forward to intranet dns server
@@ -105,7 +105,7 @@
 
     # mydnsrecord.conf
     dnsrecord=my.example.com/10.10.10.10
-    
+
     # dnsblocking.conf
     dnsrecord=ad.example.com/0.0.0.0
     ```

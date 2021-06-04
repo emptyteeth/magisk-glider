@@ -52,7 +52,7 @@ rules_up() {
 
     #gliderdns chain
     iptables -t nat -N gliderdns
-    iptables -t nat -A gliderdns -p udp -m owner ! --uid-owner net_admin --dport 53 -j DNAT --to-destination 127.0.0.1:${dnsport}
+    iptables -t nat -A gliderdns -p udp --dport 53 -j DNAT --to-destination 127.0.0.1:${dnsport}
 
     #apply to OUTPUT chain
     iptables -t nat -A OUTPUT -j glider
