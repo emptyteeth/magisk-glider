@@ -17,12 +17,13 @@ precheck(){
     if [ ! -d /sys/module/${k} ] ;then abort "${k} kernel module required." ;fi
   done
   # detect curl
-  icurl="curl --retry 2 --connect-timeout 5"
+  icurl="curl"
   if ! type curl >/dev/null 2>&1 ; then
     unzip -j -o "${ZIPFILE}" 'binary/curl' -d ${TMPDIR} >&2
     chmod 755 ${TMPDIR}/curl
-    icurl="${TMPDIR}/curl --retry 2 --connect-timeout 5"
+    icurl="${TMPDIR}/curl"
   fi
+  icurl="$icurl --retry 2 --connect-timeout 5 --dns-servers 1.1.1.1"
 }
 
 glider_install(){
