@@ -30,7 +30,9 @@ precheck(){
 #glider
 glider_up() {
   glider_down
-  su net_admin -c "nohup $gldhome/bin/glider -config $gldhome/glider.conf >/dev/null 2>&1 &"
+  # running as net_admin doesn't work on android 12 beta
+  # su net_admin -c "nohup $gldhome/bin/glider -config $gldhome/glider.conf >/dev/null 2>&1 &"
+  nohup $gldhome/bin/glider -config $gldhome/glider.conf >/dev/null 2>&1 &
   echo "glider started"
 }
 
